@@ -9,7 +9,8 @@
 	"icon": "assets/dslrcamera/icon.png",
 	"environment": "client",
 	"entrypoints": {
-		"client": ["com.dslrcamera.client.DslrCameraClient"]
+		"client": ["com.dslrcamera.client.DslrCameraClient"],
+		"modmenu": ["com.dslrcamera.client.config.ModMenuIntegration"]
 	},
 	"mixins": [
 		{

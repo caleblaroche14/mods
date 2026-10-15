@@ -28,15 +28,22 @@ public final class LightMeter {
 		}
 	}
 
-	/** Manual focus distances in metres (blocks); the last one is infinity. */
-	public static final double[] MANUAL_DISTANCES = {0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5, 7, 10, 15, 20, 30, 50, 100, INFINITY_FOCUS};
+	/**
+	 * Manual focus distances in metres (blocks), spaced roughly 5–10% apart like the marks on a real focus ring so the
+	 * plane of focus can be placed precisely even at f/1.4. The last one is infinity.
+	 */
+	public static final double[] MANUAL_DISTANCES = {
+		0.3, 0.32, 0.35, 0.38, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95,
+		1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2, 2.2, 2.4, 2.6, 2.8, 3, 3.3, 3.6, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 9,
+		10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 25, 28, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 150, 200,
+		INFINITY_FOCUS};
 
 	private static double sceneEv = 12.0;
 	private static double focusDistance = 10.0;
 	private static double targetFocusDistance = 10.0;
 	private static double subjectDistance = 10.0;
 	private static FocusMode focusMode = FocusMode.AUTO;
-	private static int manualIndex = 7;
+	private static int manualIndex = nearestManualIndex(5.0);
 	private static boolean initialised;
 
 	private LightMeter() {
@@ -94,7 +101,10 @@ public final class LightMeter {
 		if (metres >= 10) {
 			return Math.round(metres) + "m";
 		}
-		return (metres == Math.floor(metres) ? String.valueOf((int) metres) : String.format(java.util.Locale.ROOT, "%.1f", metres)) + "m";
+		// Two decimals under 1m (0.35m), one up to 10m (2.2m), trailing zeros dropped (0.4m, 2m).
+		String text = String.format(java.util.Locale.ROOT, metres < 1 ? "%.2f" : "%.1f", metres);
+		text = text.replaceAll("0+$", "").replaceAll("\\.$", "");
+		return text + "m";
 	}
 
 	private static int nearestManualIndex(double metres) {

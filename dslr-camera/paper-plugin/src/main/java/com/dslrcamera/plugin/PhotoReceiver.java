@@ -168,11 +168,16 @@ final class PhotoReceiver implements PluginMessageListener {
 		int sourceLength = buf.getInt();
 		int sourceChunks = buf.get() & 0xFF;
 
-		int maxCols = plugin.getConfig().getInt("max-cols", 4);
-		int maxRows = plugin.getConfig().getInt("max-rows", 4);
+		int maxCols = plugin.getConfig().getInt("max-cols", 8);
+		int maxRows = plugin.getConfig().getInt("max-rows", 8);
+		if (cols > maxCols || rows > maxRows) {
+			plugin.getServer().getScheduler().runTask(plugin, () -> player.sendActionBar(Component.text(
+				"This server prints photos up to " + maxCols + "×" + maxRows + " maps.", NamedTextColor.RED)));
+			return;
+		}
 		// A deflated image is never bigger than the raw RGB plus a little framing.
 		int maxSource = cols * rows * SIZE * SIZE * 3 + 4096;
-		if (cols < 1 || rows < 1 || cols > maxCols || rows > maxRows || sourceLength <= 0 || sourceLength > maxSource
+		if (cols < 1 || rows < 1 || sourceLength <= 0 || sourceLength > maxSource
 			|| sourceChunks != (sourceLength + CHUNK_SIZE - 1) / CHUNK_SIZE) {
 			return;
 		}

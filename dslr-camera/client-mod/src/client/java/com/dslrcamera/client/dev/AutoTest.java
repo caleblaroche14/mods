@@ -262,7 +262,7 @@ public final class AutoTest {
 				select(CameraState.Setting.APERTURE);
 				CameraState.scroll(-20);
 				select(CameraState.Setting.FOCUS);
-				CameraState.scroll(-40);
+				CameraState.scroll(-(LightMeter.MANUAL_DISTANCES.length + 1));
 			}
 			if (stepTicks == 40) {
 				logExposure("f/1.4 AF near");
@@ -273,7 +273,7 @@ public final class AutoTest {
 		STEPS.add(new Step("manual focus at infinity", 40, mc -> {
 			if (stepTicks == 1) {
 				select(CameraState.Setting.FOCUS);
-				CameraState.scroll(40);
+				CameraState.scroll(LightMeter.MANUAL_DISTANCES.length + 1);
 			}
 			if (stepTicks == 30) {
 				logExposure("f/1.4 MF infinity");
@@ -282,7 +282,7 @@ public final class AutoTest {
 		}));
 		STEPS.add(new Step("deep focus at f/16", 40, mc -> {
 			if (stepTicks == 1) {
-				CameraState.scroll(-40);
+				CameraState.scroll(-(LightMeter.MANUAL_DISTANCES.length + 1));
 				select(CameraState.Setting.APERTURE);
 				while (ExposureSettings.fNumber() < 16) {
 					CameraState.scroll(1);
@@ -297,7 +297,7 @@ public final class AutoTest {
 			if (stepTicks == 1) {
 				setMode(ExposureSettings.Mode.PROGRAM);
 				select(CameraState.Setting.FOCUS);
-				CameraState.scroll(-40);
+				CameraState.scroll(-(LightMeter.MANUAL_DISTANCES.length + 1));
 				mc.player.setYRot(160.0F);
 				mapsBefore = mc.player.getInventory().countItem(Items.FILLED_MAP);
 			}

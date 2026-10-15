@@ -27,7 +27,13 @@ void main() {
     float size = blurRadius(sceneDistance(DepthSampler, texCoord));
     vec3 colour = sharp;
     if (size > 0.5) {
-        colour = mix(sharp, texture(BlurSampler, texCoord).rgb, smoothstep(0.5, 2.0, size));
+        // Four bilinear taps smooth out the grain left by the sparse half-resolution gather on large discs.
+        vec2 o = Screen.xy * clamp(size * 0.1, 0.5, 2.0);
+        vec3 blurred = 0.25 * (texture(BlurSampler, texCoord + vec2(o.x, o.y)).rgb
+            + texture(BlurSampler, texCoord + vec2(-o.x, o.y)).rgb
+            + texture(BlurSampler, texCoord + vec2(o.x, -o.y)).rgb
+            + texture(BlurSampler, texCoord + vec2(-o.x, -o.y)).rgb);
+        colour = mix(sharp, blurred, smoothstep(0.5, 2.0, size));
     }
 
     vec3 linear = pow(max(colour, vec3(0.0)), vec3(2.2)) * Exposure.x;

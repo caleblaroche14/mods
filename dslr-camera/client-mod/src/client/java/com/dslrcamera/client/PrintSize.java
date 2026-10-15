@@ -6,7 +6,10 @@ import java.util.List;
 public record PrintSize(int cols, int rows) {
 	public static final List<PrintSize> ALL = List.of(
 		new PrintSize(1, 1), new PrintSize(2, 1), new PrintSize(1, 2), new PrintSize(2, 2),
-		new PrintSize(3, 2), new PrintSize(2, 3), new PrintSize(3, 3), new PrintSize(4, 3), new PrintSize(3, 4));
+		new PrintSize(3, 2), new PrintSize(2, 3), new PrintSize(3, 3), new PrintSize(4, 3), new PrintSize(3, 4),
+		new PrintSize(4, 4), new PrintSize(5, 4), new PrintSize(4, 5), new PrintSize(6, 4), new PrintSize(4, 6),
+		new PrintSize(5, 5), new PrintSize(8, 4), new PrintSize(4, 8), new PrintSize(6, 6), new PrintSize(8, 6),
+		new PrintSize(6, 8), new PrintSize(8, 8));
 
 	public int tiles() {
 		return cols * rows;

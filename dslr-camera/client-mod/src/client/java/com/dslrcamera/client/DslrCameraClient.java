@@ -2,6 +2,7 @@ package com.dslrcamera.client;
 
 import java.util.List;
 
+import com.dslrcamera.client.config.DslrConfig;
 import com.dslrcamera.client.dev.AutoTest;
 import com.dslrcamera.client.editor.EditorClient;
 import com.dslrcamera.client.exposure.ExposureSettings;
@@ -45,6 +46,7 @@ public class DslrCameraClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		DslrConfig.load();
 		PayloadTypeRegistry.serverboundPlay().register(PhotoPayload.TYPE, PhotoPayload.CODEC);
 		EditorClient.register();
 		DslrEffect.register();

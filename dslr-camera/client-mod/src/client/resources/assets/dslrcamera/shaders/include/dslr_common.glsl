@@ -4,7 +4,8 @@ layout(std140) uniform DslrConfig {
     vec4 Exposure; // x: linear gain, y: noise strength, z: vignette strength, w: noise seed
     vec4 Lens;     // x: focal length (mm), y: f-number, z: focus distance (m), w: full-res pixels per sensor mm
     vec4 Depth;    // x: projection m22, y: projection m32, z: 1 if NDC depth is [0,1], w: max blur radius (full-res px)
-    vec4 Screen;   // xy: full-res texel size, z: aspect ratio, w: 1 to enable depth of field
+    vec4 Screen;   // xy: full-res texel size, z: aspect ratio, w: depth of field strength multiplier (0 disables)
+    vec4 Bokeh;    // x: highlight luma threshold, y: highlight weight boost
 };
 
 const float FAR_DISTANCE = 100000.0;
@@ -22,7 +23,7 @@ float sceneDistance(sampler2D depthSampler, vec2 uv) {
 
 // Thin-lens circle of confusion radius, in full-resolution pixels, for an object at `dist` metres.
 float blurRadius(float dist) {
-    if (Screen.w < 0.5) {
+    if (Screen.w <= 0.0) {
         return 0.0;
     }
     float f = Lens.x;
@@ -30,5 +31,5 @@ float blurRadius(float dist) {
     float s = Lens.z * 1000.0;
     float d = dist * 1000.0;
     float diameterMm = aperture * f * abs(d - s) / (d * max(s - f, 1.0));
-    return min(diameterMm * Lens.w * 0.5, Depth.w);
+    return min(diameterMm * Lens.w * 0.5 * Screen.w, Depth.w);
 }

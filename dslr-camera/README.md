@@ -89,7 +89,7 @@ Select a setting with **X** and change it with the **mouse wheel**.
 | **Exp. comp** | −3 to +3 | Make auto exposure brighter or darker (not in M mode) |
 | **Focus** | AF, 0.3m to ∞ | Autofocus, or turn the focus ring by hand |
 | **Zoom** | 16mm to 300mm | Wide angle to telephoto. Mouse sensitivity slows down as you zoom in |
-| **Print size** | 1×1 up to 4×3 / 3×4 | How many maps the photo is printed across |
+| **Print size** | 1×1 up to 8×8 | How many maps the photo is printed across (up to 64 maps; your server may set a lower limit) |
 
 #### Exposure modes
 
@@ -107,8 +107,10 @@ The dial skips settings the current mode controls for you.
 - **AF:** continuously focuses on whatever is under the center brackets.
 - **AF-L (press V):** freezes focus where it is, so you can aim somewhere else and keep your subject sharp. Great
   for off-centre subjects.
-- **Manual:** select **Focus** and scroll to set a distance. Scroll all the way back to return to AF. The brackets
-  still turn green when what you're aiming at is in focus.
+- **Manual:** select **Focus** and scroll to set a distance. The ring moves in fine steps (about 5–10% at a time,
+  e.g. 2.2m → 2.4m → 2.6m), so you can place the focus exactly at f/1.4. When you leave AF, manual focus starts
+  from the distance AF had found. Scroll all the way back to return to AF. The brackets still turn green when what
+  you're aiming at is in focus.
 
 #### Long exposures
 
@@ -124,13 +126,29 @@ Lowering the camera (right-click) cancels the exposure.
 ### Tips for great photos
 
 - **Blurry background ("bokeh"):** use **A** mode, set the aperture to **f/1.4–f/2.8**, zoom in to **85mm or
-  more**, get close to your subject and keep the background far away.
+  more**, get close to your subject and keep the background far away. Torches, lanterns and bright sky peeking
+  through leaves turn into soft bokeh discs.
 - **Everything sharp (landscapes):** use **f/8–f/16**.
 - **Bright sunlight at f/1.4:** this works thanks to the electronic shutter (1/8000 and faster). If the meter still
   blinks, stop down a little.
 - **Night:** raise the ISO for handheld shots, or use a long exposure and stand still for a clean, bright result.
 - **Too bright or too dark?** In P, A or S mode use **Exp. comp**. In M mode, turn the dials until the meter bar
   is centred.
+
+### Blur and bokeh settings
+
+With **[Mod Menu](https://modrinth.com/mod/modmenu)** installed, open **Mods → DSLR Camera → ⚙ (config)** to tune
+the depth of field look. Changes apply instantly and are saved to `config/dslrcamera.json`. Hover a slider for a
+description; double-click it to reset.
+
+| Setting | Default | What it does |
+|---|---|---|
+| **Blur strength** | 2.5x | Multiplies the real lens blur. 1.0x is physically accurate; 0 turns depth of field off |
+| **Max blur size** | 80 px | Largest blur radius (at 1080p). Higher = creamier backgrounds, but slower |
+| **Bokeh threshold** | 0.70 | How bright a point must be to become a bokeh disc. Lower = more discs |
+| **Bokeh intensity** | 8.0 | How strongly bright points bloom into discs. 0 = plain, even blur |
+
+Without Mod Menu you can edit `config/dslrcamera.json` directly (restart the game to apply).
 
 ### Printing
 
@@ -207,7 +225,7 @@ The plugin and the client mod must be the **same version**. If you update one, u
 | `consume-item` | `PAPER` | Item taken for each print. `""` makes printing free |
 | `consume-per-tile` | `1` | How many of that item per map tile (a 3×2 photo uses 6×) |
 | `cooldown-seconds` | `3` | Minimum time between prints per player |
-| `max-cols` / `max-rows` | `4` / `4` | Largest photo size players may print |
+| `max-cols` / `max-rows` | `8` / `8` | Largest photo size players may print (the camera offers up to 8×8) |
 | `camera-recipe` | `true` | Whether the camera crafting recipe is enabled |
 
 Costs apply to both camera prints and edited copies. Creative-mode players never pay.
@@ -232,7 +250,7 @@ Everything lives in `plugins/DslrCamera/`. **Back up both folders:**
 | `photos/` | The image on every printed map (one small file per map) | Printed photos turn into blank maps |
 | `sources/` | Full-colour copies used by the photo editor | Photos can still be edited, but from their map colours (lower quality) |
 
-Each map tile is 16 KB. Sources are typically 20–300 KB per photo, depending on size.
+Each map tile is 16 KB. Sources are typically 20–300 KB per photo, depending on size (up to a few MB for 8×8).
 
 ### How it works (short version)
 

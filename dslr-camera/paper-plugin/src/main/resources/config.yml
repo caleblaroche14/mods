@@ -5,8 +5,8 @@ consume-item: PAPER
 consume-per-tile: 1
 # Minimum seconds between prints per player.
 cooldown-seconds: 3
-# Largest photo size players may print, in maps.
-max-cols: 4
-max-rows: 4
+# Largest photo size players may print, in maps (the camera offers sizes up to 8x8).
+max-cols: 8
+max-rows: 8
 # Adds the crafting recipe: iron ingot on top/left/right, spyglass in the middle, redstone below.
 camera-recipe: true
