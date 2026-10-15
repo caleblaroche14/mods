@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"package": "com.dslrcamera.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"CameraMixin",
+		"GameRendererMixin",
+		"HudMixin",
+		"IrisHandRendererMixin",
+		"MouseHandlerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

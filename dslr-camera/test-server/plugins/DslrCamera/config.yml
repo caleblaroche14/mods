@@ -1,0 +1,11 @@
+# Item consumed from the player's inventory per printed map tile (a 3x2 photo costs 6). Set to "" to print for free.
+# Players in creative mode or with dslrcamera.bypass never pay.
+consume-item: PAPER
+consume-per-tile: 1
+# Minimum seconds between prints per player.
+cooldown-seconds: 3
+# Largest photo size players may print, in maps.
+max-cols: 4
+max-rows: 4
+# Adds the crafting recipe: iron ingot on top/left/right, spyglass in the middle, redstone below.
+camera-recipe: true

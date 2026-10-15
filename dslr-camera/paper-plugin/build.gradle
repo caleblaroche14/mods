@@ -1,0 +1,28 @@
+plugins {
+	id 'java'
+}
+
+repositories {
+	mavenCentral()
+	maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+}
+
+dependencies {
+	compileOnly "io.papermc.paper:paper-api:${project.paper_api_version}"
+}
+
+java {
+	toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.release = 25
+}
+
+processResources {
+	def v = project.version
+	inputs.property "version", v
+	filesMatching("plugin.yml") {
+		expand "version": v
+	}
+}

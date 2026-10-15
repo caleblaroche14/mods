@@ -1,0 +1,25 @@
+{
+  "stats": {
+    "minecraft:custom": {
+      "minecraft:interact_with_cartography_table": 1,
+      "minecraft:sprint_one_cm": 7070,
+      "minecraft:time_since_rest": 23048,
+      "minecraft:walk_one_cm": 22455,
+      "minecraft:total_world_time": 23048,
+      "minecraft:leave_game": 5,
+      "minecraft:play_time": 23048,
+      "minecraft:time_since_death": 23048,
+      "minecraft:drop": 10
+    },
+    "minecraft:dropped": {
+      "minecraft:stripped_oak_wood": 1,
+      "minecraft:filled_map": 9
+    },
+    "minecraft:used": {
+      "minecraft:item_frame": 27,
+      "minecraft:spyglass": 31,
+      "minecraft:stripped_oak_wood": 1
+    }
+  },
+  "DataVersion": 4903
+}

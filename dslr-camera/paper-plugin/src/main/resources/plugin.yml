@@ -1,0 +1,20 @@
+name: DslrCamera
+version: '${version}'
+main: com.dslrcamera.plugin.DslrCameraPlugin
+api-version: '26.2'
+description: Camera item, photo printing and item-frame photo walls for the DSLR Camera client mod.
+commands:
+  dslrcamera:
+    description: Give a camera.
+    usage: /dslrcamera give [player]
+    permission: dslrcamera.give
+permissions:
+  dslrcamera.use:
+    description: Allows printing photos
+    default: true
+  dslrcamera.bypass:
+    description: Prints for free with no cooldown
+    default: op
+  dslrcamera.give:
+    description: Allows /dslrcamera give
+    default: op

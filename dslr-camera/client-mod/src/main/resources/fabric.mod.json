@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"id": "dslrcamera",
+	"version": "${version}",
+	"name": "DSLR Camera",
+	"description": "Take DSLR-style photos with exposure, aperture and ISO, and print them to maps on Paper servers running the companion plugin.",
+	"authors": ["caleb"],
+	"license": "MIT",
+	"icon": "assets/dslrcamera/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["com.dslrcamera.client.DslrCameraClient"]
+	},
+	"mixins": [
+		{
+			"config": "dslrcamera.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

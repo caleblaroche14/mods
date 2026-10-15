@@ -1,0 +1,33 @@
+{
+	"model": {
+		"type": "minecraft:select",
+		"property": "minecraft:custom_model_data",
+		"index": 0,
+		"cases": [
+			{
+				"when": "dslrcamera:camera",
+				"model": {
+					"type": "minecraft:model",
+					"model": "dslrcamera:item/camera"
+				}
+			}
+		],
+		"fallback": {
+			"type": "minecraft:select",
+			"property": "minecraft:display_context",
+			"cases": [
+				{
+					"when": ["gui", "ground", "fixed", "on_shelf"],
+					"model": {
+						"type": "minecraft:model",
+						"model": "minecraft:item/spyglass"
+					}
+				}
+			],
+			"fallback": {
+				"type": "minecraft:model",
+				"model": "minecraft:item/spyglass_in_hand"
+			}
+		}
+	}
+}
