@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 
 import com.dslrcamera.client.exposure.ExposureSettings;
+import com.dslrcamera.client.exposure.Flash;
 import com.dslrcamera.client.exposure.LightMeter;
 import com.dslrcamera.client.photo.PhotoCapture;
 import net.minecraft.client.DeltaTracker;
@@ -42,6 +43,7 @@ public final class ViewfinderHud {
 
 		if (PhotoCapture.isExposing()) {
 			renderExposing(g, font, w, h);
+			renderFlashPop(g, w, h);
 			return;
 		}
 
@@ -98,6 +100,14 @@ public final class ViewfinderHud {
 		if (blackout > 0) {
 			g.fill(0, 0, w, h, (int) (blackout * 255) << 24);
 		}
+		renderFlashPop(g, w, h);
+	}
+
+	private static void renderFlashPop(GuiGraphicsExtractor g, int w, int h) {
+		float pop = Flash.popAlpha();
+		if (pop > 0) {
+			g.fill(0, 0, w, h, (int) (pop * 255) << 24 | 0xFFFFFF);
+		}
 	}
 
 	private static void renderTopBar(GuiGraphicsExtractor g, Font font, int left, int right, int y) {
@@ -132,7 +142,7 @@ public final class ViewfinderHud {
 		}
 	}
 
-	/** Green LCD strip: shutter, aperture, meter, ISO, compensation, focal length and print size. */
+	/** Green LCD strip: shutter, aperture, meter, ISO, compensation, flash, focal length and print size. */
 	private static void renderStatusStrip(GuiGraphicsExtractor g, Font font, int left, int right, int y) {
 		g.fill(left, y - 3, right, y + 11, LCD_BG);
 		List<Item> items = new ArrayList<>();
@@ -143,6 +153,7 @@ public final class ViewfinderHud {
 		if (ExposureSettings.compensationApplies()) {
 			items.add(new Item(CameraState.Setting.COMPENSATION, "☀" + ExposureSettings.compLabel(ExposureSettings.compThirds())));
 		}
+		items.add(flashItem());
 		items.add(new Item(CameraState.Setting.ZOOM, Math.round(CameraState.targetFocal()) + "mm"));
 		items.add(new Item(CameraState.Setting.SIZE, CameraState.size().label()));
 
@@ -164,12 +175,36 @@ public final class ViewfinderHud {
 			if (selected) {
 				g.fill(x - 2, y - 2, x + width + 2, y + 10, LCD);
 			}
-			g.text(font, item.label, x, y, selected ? BLACK : LCD);
+			g.text(font, item.label, x, y, selected ? BLACK : item.colour);
 			x += width + gap;
 		}
 	}
 
-	private record Item(CameraState.Setting setting, String label) {
+	private record Item(CameraState.Setting setting, String label, int colour) {
+		Item(CameraState.Setting setting, String label) {
+			this(setting, label, LCD);
+		}
+	}
+
+	/**
+	 * "⚡ON 26m": mode plus full-power range. Lit when the flash will fire, dim when it won't, blinking while it
+	 * recharges, red when the subject is beyond its reach.
+	 */
+	private static Item flashItem() {
+		Flash.Mode mode = Flash.mode();
+		if (mode == Flash.Mode.OFF) {
+			return new Item(CameraState.Setting.FLASH, "⚡OFF", LCD_DIM);
+		}
+		String label = "⚡" + mode.shortLabel + " " + Math.round(Flash.rangeMetres()) + "m";
+		int colour;
+		if (!Flash.isReady()) {
+			colour = (System.currentTimeMillis() / 250) % 2 == 0 ? LCD : LCD_DIM;
+		} else if (!Flash.willFire()) {
+			colour = LCD_DIM;
+		} else {
+			colour = Flash.subjectOutOfRange() ? RED : LCD;
+		}
+		return new Item(CameraState.Setting.FLASH, label, colour);
 	}
 
 	/** Classic -3..+3 exposure scale with a bar from zero to the current deviation. */
@@ -228,6 +263,12 @@ public final class ViewfinderHud {
 					values.add(ExposureSettings.compLabel(t));
 				}
 				current = ExposureSettings.compThirds() + ExposureSettings.MAX_COMP_THIRDS;
+			}
+			case FLASH -> {
+				for (Flash.Mode mode : Flash.Mode.values()) {
+					values.add(mode.label);
+				}
+				current = Flash.mode().ordinal();
 			}
 			case FOCUS -> {
 				values.add("AF");

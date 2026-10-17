@@ -1,5 +1,6 @@
 package com.dslrcamera.client.dev;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -10,10 +11,12 @@ import com.dslrcamera.client.DslrCameraClient;
 import com.dslrcamera.client.PrintSize;
 import com.dslrcamera.client.editor.EditorScreen;
 import com.dslrcamera.client.exposure.ExposureSettings;
+import com.dslrcamera.client.exposure.Flash;
 import com.dslrcamera.client.exposure.LightMeter;
 import com.dslrcamera.client.photo.PhotoCapture;
 import com.dslrcamera.client.render.DslrEffect;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.KeyMapping;
 import org.lwjgl.glfw.GLFW;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -95,8 +98,8 @@ public final class AutoTest {
 						SETUP_COMMANDS.add("summon item_frame " + (WALL_TOP_LEFT_X - col) + " " + (WALL_TOP_Y - row) + " " + FRAME_Z + " {Facing:2b}");
 					}
 				}
-				// Drop op so printing goes through the normal paper cost path.
-				SETUP_COMMANDS.add("deop " + name);
+				// Drop op so printing goes through the normal paper cost path (after the flash test, which needs /time).
+				deopCommand = "deop " + name;
 			}
 			if ((stepTicks & 1) == 0 && !SETUP_COMMANDS.isEmpty()) {
 				mc.player.connection.sendCommand(SETUP_COMMANDS.removeFirst());
@@ -120,6 +123,7 @@ public final class AutoTest {
 			return CameraState.isActive();
 		}));
 		STEPS.add(new Step("camera stays up after release (toggle)", 30, mc -> waitTicks(25) && CameraState.isActive()));
+		addFlashSteps();
 		STEPS.add(new Step("choose 3x2 in program mode", 5, mc -> {
 			setMode(ExposureSettings.Mode.PROGRAM);
 			select(CameraState.Setting.SIZE);
@@ -384,6 +388,129 @@ public final class AutoTest {
 
 	private static int mapsBefore;
 	private static int paperBefore;
+	private static String deopCommand;
+	private static int photosBefore;
+
+	/**
+	 * Same night scene and manual settings twice, flash off then on: the flash photo's centre (the gold pillar ~3.5m
+	 * away) must come out clearly brighter. Compares the saved full-resolution photos, since the live view never
+	 * shows the flash.
+	 */
+	private static void addFlashSteps() {
+		STEPS.add(new Step("night, manual f/2.8 1/60 ISO 400, flash off", 200, mc -> {
+			if (stepTicks == 1) {
+				mc.player.connection.sendCommand("time set midnight");
+				mc.player.setYRot(180.0F);
+				mc.player.setXRot(0.0F);
+				setMode(ExposureSettings.Mode.MANUAL);
+				select(CameraState.Setting.APERTURE);
+				CameraState.scroll(-20);
+				CameraState.scroll(3);
+				select(CameraState.Setting.SHUTTER);
+				while (ExposureSettings.shutterSeconds() > 1 / 60.0 + 1e-9) {
+					CameraState.scroll(1);
+				}
+				while (ExposureSettings.shutterSeconds() < 1 / 60.0 - 1e-9) {
+					CameraState.scroll(-1);
+				}
+				select(CameraState.Setting.ISO);
+				CameraState.scroll(-20);
+				CameraState.scroll(2);
+				select(CameraState.Setting.SIZE);
+				while (!CameraState.size().equals(new PrintSize(1, 1))) {
+					CameraState.scroll(1);
+				}
+				select(CameraState.Setting.FLASH);
+				CameraState.scroll(-5);
+			}
+			return waitTicks(60) && mc.level.getSkyDarken() > 8 && !Flash.willFire();
+		}));
+		STEPS.add(new Step("photo without flash", 200, mc -> {
+			if (stepTicks == 1) {
+				logExposure("night, no flash");
+				photosBefore = countPhotos(mc);
+				click(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+			}
+			return countPhotos(mc) > photosBefore;
+		}));
+		STEPS.add(new Step("photo with flash", 200, mc -> {
+			if (stepTicks == 1) {
+				select(CameraState.Setting.FLASH);
+				CameraState.scroll(-5);
+				CameraState.scroll(2);
+			}
+			if (stepTicks == 20) {
+				DslrCameraClient.LOGGER.info("[autotest] flash {} willFire {} power {} subject {}m range {}m renderLight {}",
+					Flash.mode(), Flash.willFire(), String.format("%.1f", Flash.power()), String.format("%.2f", LightMeter.subjectDistance()),
+					String.format("%.1f", Flash.rangeMetres()), String.format("%.4f", LightMeter.subjectRenderLight()));
+				if (!Flash.willFire()) {
+					throw new IllegalStateException("flash ON but not ready to fire");
+				}
+				photosBefore = countPhotos(mc);
+				click(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+			}
+			if (stepTicks == 22) {
+				screenshot(mc, "flash_pop");
+			}
+			return stepTicks > 22 && countPhotos(mc) > photosBefore;
+		}));
+		STEPS.add(new Step("flash photo is brighter", 5, mc -> {
+			List<File> photos = photoFiles(mc);
+			double without = centreLuma(photos.get(photos.size() - 2));
+			double with = centreLuma(photos.get(photos.size() - 1));
+			DslrCameraClient.LOGGER.info("[autotest] centre luma: no flash {} / flash {} = {}x", String.format("%.1f", without),
+				String.format("%.1f", with), String.format("%.2f", with / Math.max(without, 0.5)));
+			return with > without * 1.5 + 10;
+		}));
+		STEPS.add(new Step("back to noon, flash off, drop op", 120, mc -> {
+			if (stepTicks == 1) {
+				select(CameraState.Setting.FLASH);
+				CameraState.scroll(-5);
+				select(CameraState.Setting.ISO);
+				CameraState.scroll(-20);
+				mc.player.connection.sendCommand("time set noon");
+			}
+			if (stepTicks == 70) {
+				// Let the server's print cooldown pass before dropping op, so the 3x2 print isn't refused.
+				mc.player.connection.sendCommand(deopCommand);
+			}
+			return waitTicks(90) && mc.level.getSkyDarken() < 3;
+		}));
+	}
+
+	/** Full-resolution photos (not the _map previews) in the photo folder, oldest first. */
+	private static List<File> photoFiles(Minecraft mc) {
+		File[] files = new File(mc.gameDirectory, "dslr_photos").listFiles((dir, name) -> name.endsWith(".png") && !name.endsWith("_map.png"));
+		List<File> list = new ArrayList<>(files == null ? List.of() : List.of(files));
+		list.sort(java.util.Comparator.comparingLong(File::lastModified).thenComparing(File::getName));
+		return list;
+	}
+
+	/** Counts photos whose _map preview has also been written, so the full-resolution file is complete. */
+	private static int countPhotos(Minecraft mc) {
+		File[] maps = new File(mc.gameDirectory, "dslr_photos").listFiles((dir, name) -> name.endsWith("_map.png"));
+		return maps == null ? 0 : maps.length;
+	}
+
+	/** Mean 0-255 luma of the middle third of an image. */
+	private static double centreLuma(File file) {
+		try (var in = new java.io.FileInputStream(file); NativeImage image = NativeImage.read(in)) {
+			int w = image.getWidth();
+			int h = image.getHeight();
+			double sum = 0;
+			int n = 0;
+			for (int y = h / 3; y < 2 * h / 3; y += 2) {
+				for (int x = w / 3; x < 2 * w / 3; x += 2) {
+					int p = image.getPixel(x, y);
+					sum += 0.2126 * ((p >> 16) & 0xFF) + 0.7152 * ((p >> 8) & 0xFF) + 0.0722 * (p & 0xFF);
+					n++;
+				}
+			}
+			return sum / n;
+		} catch (java.io.IOException e) {
+			throw new IllegalStateException("Could not read " + file, e);
+		}
+	}
 
 	private static void useCartographyTable(Minecraft mc) {
 		BlockPos table = new BlockPos(5, -60, 3);

@@ -87,6 +87,7 @@ Select a setting with **X** and change it with the **mouse wheel**.
 | **Aperture** | f/1.4 to f/22 | How wide the lens opens. Low numbers = brighter and a blurrier background |
 | **ISO** | 100 to 25600 | Sensor sensitivity. Higher = brighter but grainier |
 | **Exp. comp** | −3 to +3 | Make auto exposure brighter or darker (not in M mode) |
+| **Flash** | OFF, AUTO, ON, SLOW | Light up nearby subjects. See [Flash](#flash) |
 | **Focus** | AF, 0.3m to ∞ | Autofocus, or turn the focus ring by hand |
 | **Zoom** | 16mm to 300mm | Wide angle to telephoto. Mouse sensitivity slows down as you zoom in |
 | **Print size** | 1×1 up to 8×8 | How many maps the photo is printed across (up to 64 maps; your server may set a lower limit) |
@@ -104,13 +105,33 @@ The dial skips settings the current mode controls for you.
 
 #### Focus
 
-- **AF:** continuously focuses on whatever is under the center brackets.
+- **AF:** continuously focuses on whatever is under the center brackets: blocks, players, mobs or item frames, up
+  to 256 blocks away.
 - **AF-L (press V):** freezes focus where it is, so you can aim somewhere else and keep your subject sharp. Great
   for off-centre subjects.
 - **Manual:** select **Focus** and scroll to set a distance. The ring moves in fine steps (about 5–10% at a time,
   e.g. 2.2m → 2.4m → 2.6m), so you can place the focus exactly at f/1.4. When you leave AF, manual focus starts
   from the distance AF had found. Scroll all the way back to return to AF. The brackets still turn green when what
   you're aiming at is in focus.
+
+#### Flash
+
+A hot-shoe speedlight. It lights whatever is close to you, fading with distance like a real flash, and it meters
+itself (TTL) so the subject under the centre brackets comes out correctly exposed.
+
+| Mode | What it does |
+|---|---|
+| **OFF** (default) | Never fires |
+| **AUTO** | Fires only when the subject is too dark |
+| **ON** | Always fires. In daylight it gently fills in shadows on faces |
+| **SLOW** | Slow sync: fires, but lets the shutter stay slow so a night background still shows (hold still!) |
+
+- The strip shows the flash's **range** at the current aperture and ISO (e.g. `⚡ON 26m`). It turns **red** when
+  your subject is out of reach. Open the aperture or raise the ISO to reach further.
+- In **P** and **A**, the camera won't pick a shutter slower than 1/60 when the flash fires (except in SLOW).
+- After a strong flash it takes up to 2.5 seconds to recharge; the label blinks until it's ready.
+- Like a real camera, the live view doesn't show the flash. You'll see a white pop and the result in the photo.
+- Other players see your flash go off (needs the updated server plugin).
 
 #### Long exposures
 
@@ -132,6 +153,8 @@ Lowering the camera (right-click) cancels the exposure.
 - **Bright sunlight at f/1.4:** this works thanks to the electronic shutter (1/8000 and faster). If the meter still
   blinks, stop down a little.
 - **Night:** raise the ISO for handheld shots, or use a long exposure and stand still for a clean, bright result.
+- **Night portraits:** set the flash to **ON** for a crisp, lit subject on a dark background, or **SLOW** to keep
+  the sky and city lights behind them.
 - **Too bright or too dark?** In P, A or S mode use **Exp. comp**. In M mode, turn the dials until the meter bar
   is centred.
 
@@ -256,8 +279,9 @@ Each map tile is 16 KB. Sources are typically 20–300 KB per photo, depending o
 
 - The camera is a spyglass tagged by the plugin. The client mod renders it as a camera and turns it into a
   viewfinder.
-- All the optics (exposure, depth of field, grain, long exposures) run on the photographer's computer. The server
-  only receives the finished picture, already converted to map colours, plus a full-colour copy for editing.
+- All the optics (exposure, depth of field, flash, grain, long exposures) run on the photographer's computer. The
+  server only receives the finished picture, already converted to map colours, plus a full-colour copy for editing.
+  When the flash fires, the server just shows a flash particle to nearby players.
 - The server checks the player is really holding a camera (or is at a cartography table for edits), charges the
   print cost, and creates locked maps that survive restarts.
 
@@ -278,7 +302,7 @@ cd paper-plugin && ./gradlew build        # -> build/libs/dslr-camera-plugin-1.0
 ### End-to-end test
 
 `test-server/` is a local Paper 26.2 server with the plugin installed. With it running, op the test player (in the
-server console: `op DslrTester`), then:
+server console: `op DslrTester`; the test de-ops it again, so repeat this before every run), then:
 
 ```bash
 cd client-mod && ./gradlew runAutotestClient
@@ -286,9 +310,10 @@ cd client-mod && ./gradlew runAutotestClient
 
 A client joins `localhost`, and with real mouse clicks:
 
-1. Prints a 3×2 photo and hangs it on a wall of item frames.
-2. Checks exposure, depth of field, high ISO and a 1-second long exposure.
-3. Edits a photo at a cartography table.
+1. Shoots the same night scene with the flash off and on, and checks the flash photo is clearly brighter.
+2. Prints a 3×2 photo and hangs it on a wall of item frames.
+3. Checks exposure, depth of field, high ISO and a 1-second long exposure.
+4. Edits a photo at a cartography table.
 
 It saves screenshots to `client-mod/run/screenshots/autotest_*.png` and logs `PASS` or `FAIL`. The test server's
 `spigot.yml` excludes the test's setup commands from the chat spam limit.

@@ -25,6 +25,8 @@ public record PhotoPayload(byte[] data) implements CustomPacketPayload {
 	public static final int KIND_PREVIEW = 2;
 	public static final int KIND_SOURCE = 3;
 	public static final int KIND_CLOSE_EDITOR = 4;
+	/** The flash fired, so the server can show it to other players. Older plugins ignore it. */
+	public static final int KIND_FLASH = 5;
 
 	public static final CustomPacketPayload.Type<PhotoPayload> TYPE = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("dslrcamera", "photo"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, PhotoPayload> CODEC = StreamCodec.of(
@@ -61,6 +63,10 @@ public record PhotoPayload(byte[] data) implements CustomPacketPayload {
 
 	public static PhotoPayload closeEditor(int session) {
 		return new PhotoPayload(header(KIND_CLOSE_EDITOR, session, 0).array());
+	}
+
+	public static PhotoPayload flash() {
+		return new PhotoPayload(header(KIND_FLASH, 0, 0).array());
 	}
 
 	private static ByteBuffer header(int kind, int transferId, int bodyLength) {

@@ -9,8 +9,11 @@ import com.dslrcamera.client.CameraState;
 import com.dslrcamera.client.DslrCameraClient;
 import com.dslrcamera.client.PrintSize;
 import com.dslrcamera.client.exposure.ExposureSettings;
+import com.dslrcamera.client.exposure.Flash;
+import com.dslrcamera.client.net.PhotoPayload;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.NativeImage;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
@@ -82,6 +85,9 @@ public final class PhotoCapture {
 			return;
 		}
 		CameraState.flash();
+		if (Flash.fire() && PhotoTransfer.canSend()) {
+			ClientPlayNetworking.send(PhotoPayload.flash());
+		}
 		double seconds = ExposureSettings.shutterSeconds();
 		if (seconds <= SINGLE_FRAME_LIMIT_S) {
 			pendingShot = new Shot(caption, size);

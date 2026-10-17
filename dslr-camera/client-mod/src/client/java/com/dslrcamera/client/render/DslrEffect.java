@@ -6,7 +6,9 @@ import com.dslrcamera.client.CameraState;
 import com.dslrcamera.client.DslrCameraClient;
 import com.dslrcamera.client.config.DslrConfig;
 import com.dslrcamera.client.exposure.ExposureSettings;
+import com.dslrcamera.client.exposure.Flash;
 import com.dslrcamera.client.exposure.LightMeter;
+import com.dslrcamera.client.photo.PhotoCapture;
 import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
@@ -31,7 +33,7 @@ import org.joml.Matrix4f;
  */
 public final class DslrEffect {
 	private static final float SENSOR_HEIGHT_MM = 24.0F;
-	private static final int UBO_SIZE = 5 * 16;
+	private static final int UBO_SIZE = 6 * 16;
 
 	/** Half-resolution bokeh gather. */
 	public static final RenderPipeline BLUR_PIPELINE = RenderPipeline.builder(RenderPipelines.POST_PROCESSING_SNIPPET)
@@ -102,6 +104,9 @@ public final class DslrEffect {
 		float noise = (float) (0.012 * Math.pow(isoStops, 1.5));
 		float vignette = 0.05F + 0.4F * Math.clamp((4.0F - fNumber) / 2.6F, 0.0F, 1.0F);
 		boolean zeroToOne = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne();
+		// The flash only lights frames that end up in a photo, like a real one; the live view shows ambient light.
+		double flashPower = PhotoCapture.isExposing() ? Flash.exposurePower()
+			: CameraState.shotPending() && Flash.willFire() ? Flash.power() : 0.0;
 
 		try (GpuBufferSlice.MappedView view = ubo.currentBuffer().map(false, true)) {
 			Std140Builder.intoBuffer(view.data())
@@ -109,7 +114,8 @@ public final class DslrEffect {
 				.putVec4(focal, fNumber, focus, pixelsPerMm)
 				.putVec4(projection.m22(), projection.m32(), zeroToOne ? 1.0F : 0.0F, maxBlur)
 				.putVec4(1.0F / width, 1.0F / height, (float) width / height, strength)
-				.putVec4(DslrConfig.getFloat(DslrConfig.Option.HIGHLIGHT_THRESHOLD), DslrConfig.getFloat(DslrConfig.Option.HIGHLIGHT_BOOST), 0.0F, 0.0F);
+				.putVec4(DslrConfig.getFloat(DslrConfig.Option.HIGHLIGHT_THRESHOLD), DslrConfig.getFloat(DslrConfig.Option.HIGHLIGHT_BOOST), 0.0F, 0.0F)
+				.putVec4((float) flashPower, (float) (1.0 / LightMeter.subjectRenderLight()), projection.m00(), projection.m11());
 		}
 
 		CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();

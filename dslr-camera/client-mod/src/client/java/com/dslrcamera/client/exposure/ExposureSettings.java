@@ -90,6 +90,13 @@ public final class ExposureSettings {
 		compThirds = Mth.clamp(compThirds + steps, -MAX_COMP_THIRDS, MAX_COMP_THIRDS);
 	}
 
+	/** In the auto modes, keeps the shutter at least this fast (used when the flash fires). */
+	public static void limitSlowestShutter(double seconds) {
+		if (shutterIsAuto() && shutterSeconds() > seconds) {
+			shutter = nearestShutter(seconds);
+		}
+	}
+
 	public static double settingsEv() {
 		double n = fNumber();
 		return log2(n * n / shutterSeconds()) - log2(iso() / 100.0);

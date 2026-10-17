@@ -6,6 +6,7 @@ layout(std140) uniform DslrConfig {
     vec4 Depth;    // x: projection m22, y: projection m32, z: 1 if NDC depth is [0,1], w: max blur radius (full-res px)
     vec4 Screen;   // xy: full-res texel size, z: aspect ratio, w: depth of field strength multiplier (0 disables)
     vec4 Bokeh;    // x: highlight luma threshold, y: highlight weight boost
+    vec4 Flash;    // x: flash power at 1m (0 = not firing this frame), y: 1 / subject's render light, zw: projection m00, m11
 };
 
 const float FAR_DISTANCE = 100000.0;

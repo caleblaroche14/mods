@@ -36,12 +36,31 @@ void main() {
         colour = mix(sharp, blurred, smoothstep(0.5, 2.0, size));
     }
 
-    vec3 linear = pow(max(colour, vec3(0.0)), vec3(2.2)) * Exposure.x;
+    vec3 base = pow(max(colour, vec3(0.0)), vec3(2.2));
+    vec3 linear = base * Exposure.x;
+
+    // Flash: rebuild each pixel's view-space position from depth, then light it from the camera with inverse-square
+    // falloff and Lambert shading (normals from screen-space derivatives, so this stays in uniform control flow).
+    float z = sceneDistance(DepthSampler, texCoord);
+    vec2 ndc = texCoord * 2.0 - 1.0;
+    vec3 viewPos = vec3(ndc.x / Flash.z, ndc.y / Flash.w, 1.0) * z;
+    vec3 faceNormal = cross(dFdx(viewPos), dFdy(viewPos));
+    if (Flash.x > 0.0 && z < FAR_DISTANCE * 0.5) {
+        float d = max(length(viewPos), 0.3);
+        float normalLength = length(faceNormal);
+        float facing = normalLength > 1e-9 ? abs(dot(faceNormal / normalLength, viewPos / length(viewPos))) : 1.0;
+        // Undo Minecraft's lighting to estimate the surface colour, keeping hue if a lit pixel would exceed white.
+        vec3 albedo = base * Flash.y;
+        float peak = max(max(albedo.r, albedo.g), albedo.b);
+        albedo /= max(peak, 1.0);
+        linear += albedo * (Flash.x / (d * d)) * mix(1.0, facing, 0.85);
+    }
+
     // Overexposed highlights roll off towards white instead of hard clipping.
     vec3 knee = vec3(0.75);
     vec3 rolled = knee + (1.0 - knee) * (1.0 - exp(-(linear - knee) / (1.0 - knee)));
     vec3 compressed = mix(linear, rolled, step(knee, linear));
-    linear = mix(min(linear, vec3(1.0)), compressed, smoothstep(1.0, 1.3, Exposure.x));
+    linear = mix(min(linear, vec3(1.0)), compressed, max(smoothstep(1.0, 1.3, Exposure.x), step(1e-6, Flash.x)));
 
     vec2 centred = (texCoord - 0.5) * vec2(Screen.z, 1.0);
     float r = length(centred) / length(vec2(Screen.z, 1.0) * 0.5);

@@ -6,6 +6,7 @@ import com.dslrcamera.client.config.DslrConfig;
 import com.dslrcamera.client.dev.AutoTest;
 import com.dslrcamera.client.editor.EditorClient;
 import com.dslrcamera.client.exposure.ExposureSettings;
+import com.dslrcamera.client.exposure.Flash;
 import com.dslrcamera.client.exposure.LightMeter;
 import com.dslrcamera.client.net.PhotoPayload;
 import com.dslrcamera.client.photo.PhotoCapture;
@@ -149,6 +150,7 @@ public class DslrCameraClient implements ClientModInitializer {
 		if (CameraState.isRaised()) {
 			LightMeter.tick(minecraft);
 			ExposureSettings.autoExpose(LightMeter.sceneEv());
+			Flash.update();
 		}
 		CameraState.tick();
 	}

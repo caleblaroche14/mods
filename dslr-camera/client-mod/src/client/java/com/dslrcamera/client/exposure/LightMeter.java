@@ -3,8 +3,11 @@ package com.dslrcamera.client.exposure;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -16,7 +19,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class LightMeter {
 	private static final double FOCUS_RANGE = 256.0;
-	private static final double INFINITY_FOCUS = 1000.0;
+	static final double INFINITY_FOCUS = 1000.0;
 
 	public enum FocusMode {
 		AUTO("AF"), LOCKED("AF-L"), MANUAL("MF");
@@ -42,6 +45,7 @@ public final class LightMeter {
 	private static double focusDistance = 10.0;
 	private static double targetFocusDistance = 10.0;
 	private static double subjectDistance = 10.0;
+	private static double subjectRenderLight = 1.0;
 	private static FocusMode focusMode = FocusMode.AUTO;
 	private static int manualIndex = nearestManualIndex(5.0);
 	private static boolean initialised;
@@ -55,6 +59,19 @@ public final class LightMeter {
 
 	public static double focusDistance() {
 		return focusDistance;
+	}
+
+	/** Distance to whatever is under the centre point (1000 for open sky). */
+	public static double subjectDistance() {
+		return subjectDistance;
+	}
+
+	/**
+	 * How bright Minecraft's lighting draws the subject compared to full daylight, in linear units (1 = sunlit).
+	 * Dividing the rendered colour by this recovers roughly the surface's own colour, which the flash then lights.
+	 */
+	public static double subjectRenderLight() {
+		return subjectRenderLight;
 	}
 
 	/** True when whatever is under the centre point is within the lens's depth of field. */
@@ -132,13 +149,13 @@ public final class LightMeter {
 		}
 		Vec3 eye = camera.getEyePosition();
 		HitResult hit = camera.pick(FOCUS_RANGE, 1.0F, false);
-		Entity target = minecraft.crosshairPickEntity;
+		EntityHitResult entityHit = pickEntity(camera, eye, hit);
 
 		double distance = INFINITY_FOCUS;
 		BlockPos meteredPos = BlockPos.containing(eye);
-		if (target != null && target.position().distanceTo(eye) < FOCUS_RANGE) {
-			distance = target.getBoundingBox().getCenter().distanceTo(eye);
-			meteredPos = target.blockPosition();
+		if (entityHit != null) {
+			distance = entityHit.getLocation().distanceTo(eye);
+			meteredPos = BlockPos.containing(entityHit.getLocation());
 		} else if (hit.getType() == HitResult.Type.BLOCK) {
 			distance = hit.getLocation().distanceTo(eye);
 			BlockHitResult blockHit = (BlockHitResult) hit;
@@ -153,6 +170,7 @@ public final class LightMeter {
 		}
 
 		double ev = 0.4 * evAt(minecraft, BlockPos.containing(eye)) + 0.6 * evAt(minecraft, meteredPos);
+		subjectRenderLight = renderLightAt(minecraft, meteredPos);
 		if (!initialised) {
 			sceneEv = ev;
 			focusDistance = targetFocusDistance;
@@ -162,6 +180,33 @@ public final class LightMeter {
 			// Focus moves in log space so near and far subjects settle at a similar perceived speed.
 			focusDistance = Math.exp(Math.log(focusDistance) + (Math.log(targetFocusDistance) - Math.log(focusDistance)) * 0.35);
 		}
+	}
+
+	/**
+	 * First visible entity (players, mobs, item frames…) under the centre point, in front of any block. Vanilla's
+	 * crosshair pick only reaches arm's length, which is far too short for a lens.
+	 */
+	private static EntityHitResult pickEntity(Entity camera, Vec3 eye, HitResult blockHit) {
+		double range = blockHit.getType() == HitResult.Type.MISS ? FOCUS_RANGE : blockHit.getLocation().distanceTo(eye);
+		Vec3 ray = camera.getViewVector(1.0F).scale(range);
+		AABB searchBox = camera.getBoundingBox().expandTowards(ray).inflate(1.0);
+		return ProjectileUtil.getEntityHitResult(camera, eye, eye.add(ray), searchBox,
+			entity -> entity.isPickable() && !entity.isSpectator() && !entity.isInvisible()
+				&& entity.getRootVehicle() != camera.getRootVehicle(), range * range);
+	}
+
+	/** Approximates vanilla's lightmap (brightness curve, dimension ambient, Brightness option) as linear light. */
+	private static double renderLightAt(Minecraft minecraft, BlockPos pos) {
+		var level = minecraft.level;
+		double sky = Math.max(0, level.getBrightness(LightLayer.SKY, pos) - level.getSkyDarken()) / 15.0;
+		double block = level.getBrightness(LightLayer.BLOCK, pos) / 15.0;
+		double lit = Math.max(sky / (4.0 - 3.0 * sky), block / (4.0 - 3.0 * block));
+		double ambient = level.dimensionType().ambientLight();
+		lit = ambient + (1.0 - ambient) * lit;
+		double gamma = minecraft.options.gamma().get();
+		lit = lit * (1.0 - gamma) + (1.0 - Math.pow(1.0 - lit, 4)) * gamma;
+		lit = lit * 0.96 + 0.75 * 0.04;
+		return Math.clamp(Math.pow(lit, 2.2), 0.01, 1.0);
 	}
 
 	private static double evAt(Minecraft minecraft, BlockPos pos) {

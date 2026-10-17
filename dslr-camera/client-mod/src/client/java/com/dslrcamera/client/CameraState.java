@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 
 import com.dslrcamera.client.exposure.ExposureSettings;
+import com.dslrcamera.client.exposure.Flash;
 import com.dslrcamera.client.exposure.LightMeter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -17,7 +18,7 @@ import net.minecraft.util.Mth;
  */
 public final class CameraState {
 	public enum Setting {
-		MODE("MODE"), SHUTTER("SHUTTER"), APERTURE("APERTURE"), ISO("ISO"), COMPENSATION("EXP. COMP"), FOCUS("FOCUS"), ZOOM("ZOOM"), SIZE("PRINT SIZE");
+		MODE("MODE"), SHUTTER("SHUTTER"), APERTURE("APERTURE"), ISO("ISO"), COMPENSATION("EXP. COMP"), FLASH("FLASH"), FOCUS("FOCUS"), ZOOM("ZOOM"), SIZE("PRINT SIZE");
 
 		public final String label;
 
@@ -141,6 +142,7 @@ public final class CameraState {
 			case APERTURE -> ExposureSettings.stepAperture(steps);
 			case ISO -> ExposureSettings.stepIso(steps);
 			case COMPENSATION -> ExposureSettings.stepCompensation(steps);
+			case FLASH -> Flash.step(steps);
 			case FOCUS -> LightMeter.stepFocus(steps);
 			case ZOOM -> targetFocal = Mth.clamp((float) (targetFocal * Math.pow(ZOOM_STEP, steps)), MIN_FOCAL, MAX_FOCAL);
 			case SIZE -> cycleSize(steps);
@@ -148,8 +150,8 @@ public final class CameraState {
 	}
 
 	public static String caption() {
-		return String.format(Locale.ROOT, "%dmm · %s · %s · ISO %d", Math.round(targetFocal),
-			ExposureSettings.apertureLabel(), ExposureSettings.shutterLabel(), ExposureSettings.iso());
+		return String.format(Locale.ROOT, "%dmm · %s · %s · ISO %d%s", Math.round(targetFocal),
+			ExposureSettings.apertureLabel(), ExposureSettings.shutterLabel(), ExposureSettings.iso(), Flash.willFire() ? " · flash" : "");
 	}
 
 	/** Returns false if the shutter is still cycling. */
@@ -168,6 +170,11 @@ public final class CameraState {
 		boolean requested = shotRequested;
 		shotRequested = false;
 		return requested;
+	}
+
+	/** True during the frame that is about to be captured (the optics pass runs before the capture consumes it). */
+	public static boolean shotPending() {
+		return shotRequested;
 	}
 
 	public static void flash() {

@@ -10,8 +10,11 @@ import java.util.zip.Inflater;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Color;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapView;
@@ -22,7 +25,8 @@ import org.jetbrains.annotations.NotNull;
  * Reassembles prints sent by the client mod. Every message starts with u8 version, u8 kind, i32 transferId.
  * BEGIN: u8 cols, u8 rows, i32 editSession (0 = camera), u16 caption length + caption, i32 source length,
  * u8 source chunks. TILE: u8 index + 128*128 map colours. PREVIEW: 128*128 map colours. SOURCE: u8 index + chunk of
- * the deflated full-colour image. CLOSE_EDITOR: transferId is the editor session being closed.
+ * the deflated full-colour image. CLOSE_EDITOR: transferId is the editor session being closed. FLASH: no body; the
+ * photographer's flash fired, so nearby players see it.
  */
 final class PhotoReceiver implements PluginMessageListener {
 	private static final int VERSION = 3;
@@ -36,11 +40,15 @@ final class PhotoReceiver implements PluginMessageListener {
 	private static final int KIND_PREVIEW = 2;
 	private static final int KIND_SOURCE = 3;
 	private static final int KIND_CLOSE_EDITOR = 4;
+	private static final int KIND_FLASH = 5;
+	private static final long FLASH_MIN_INTERVAL_MS = 250;
+	private static final double FLASH_VISIBLE_RANGE = 64.0;
 
 	private final DslrCameraPlugin plugin;
 	private final PhotoStore store;
 	private final EditorSessions editors;
 	private final Map<UUID, Long> lastPrint = new ConcurrentHashMap<>();
+	private final Map<UUID, Long> lastFlash = new ConcurrentHashMap<>();
 	private final Map<UUID, Transfer> transfers = new ConcurrentHashMap<>();
 
 	PhotoReceiver(DslrCameraPlugin plugin, PhotoStore store, EditorSessions editors) {
@@ -101,6 +109,14 @@ final class PhotoReceiver implements PluginMessageListener {
 			plugin.getServer().getScheduler().runTask(plugin, () -> editors.close(player, id));
 			return;
 		}
+		if (kind == KIND_FLASH) {
+			long now = System.currentTimeMillis();
+			Long last = lastFlash.put(playerId, now);
+			if (last == null || now - last >= FLASH_MIN_INTERVAL_MS) {
+				plugin.getServer().getScheduler().runTask(plugin, () -> showFlash(player));
+			}
+			return;
+		}
 
 		Transfer transfer = transfers.get(playerId);
 		if (transfer == null || transfer.id != id || System.currentTimeMillis() - transfer.startedMs > TRANSFER_TIMEOUT_MS) {
@@ -150,6 +166,20 @@ final class PhotoReceiver implements PluginMessageListener {
 		transfers.remove(playerId, transfer);
 		// Inventory and map work must happen on the main thread.
 		plugin.getServer().getScheduler().runTask(plugin, () -> print(player, transfer));
+	}
+
+	/** A flash pop just in front of the camera, for everyone nearby except the photographer (who sees their own). */
+	private void showFlash(Player photographer) {
+		if (!photographer.isOnline()) {
+			return;
+		}
+		Location eye = photographer.getEyeLocation();
+		Location at = eye.clone().add(eye.getDirection().multiply(0.4));
+		for (Player viewer : photographer.getWorld().getPlayers()) {
+			if (viewer != photographer && viewer.getLocation().distanceSquared(at) <= FLASH_VISIBLE_RANGE * FLASH_VISIBLE_RANGE) {
+				viewer.spawnParticle(Particle.FLASH, at, 1, 0, 0, 0, 0, Color.WHITE);
+			}
+		}
 	}
 
 	private void begin(Player player, int id, ByteBuffer buf) {
